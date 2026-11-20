@@ -1,0 +1,26 @@
+---
+name: ailv-code-index
+description: "One tiny map keeps every other skill small: the agent reads hundreds of tokens, not thousands."
+---
+
+# Start here: task first, stack second
+
+`ailv-code-index` (Start here: pick skills by task): Your installed skills each do one job — never read them all. Step zero: detect the codebase's language, framework, and tokens before matching anything. Bound to a stack? The house defaults never apply — follow the codebase and skip or overwrite every conflicting house skill. We default to Python plus FastAPI plus Pydantic and Lit only for new, unbound work because agents generate it fastest with the fewest mistakes — never force it on an existing codebase. Work in two passes. Pass 1 — task first. Four skills apply to almost every task, so always read these: ailv-code-secure, ailv-code-reuse, ailv-code-token, ailv-code-output. Choosing the effort → ailv-code-models (tier the task, then match the session and effort to the tier). Then match the task and read only the matched skills — mixed tasks match more than one line, so a UI-plus-API job reads ailv-ui-index and the service skills: Interface, screen, or component work → ailv-ui-index. New service or script → ailv-code-language, ailv-code-shape. Organizing a new codebase → ailv-code-group. Inheriting an old codebase → ailv-code-legacy. Services in other languages → ailv-code-boundaries, then ailv-code-polyglot for the guest side. Public API, forms, beacons → ailv-code-ratelimit. Repeat traffic → ailv-code-cache. Usage counts → ailv-code-track. Writing for readers — technical docs → ailv-code-docs; web copy that sells → ailv-app-copy. Slow endpoint or heavy page → ailv-code-perf. Showing your work — progress, decisions, proof → ailv-code-reasoning (hidden reasoning, visible proof). Work that outlives the request → ailv-code-async. Background jobs, queues, workers, and parallel fan-out also land on ailv-code-async. Traffic spikes, shedding features → ailv-code-fallback. Login, accounts, permissions → ailv-code-auth. Product features (billing, roles, admin — any SaaS, SIS, billing system) → ailv-app-index. Landing data and scheduling pipelines → ailv-data-index. Build-test-deploy gates and paging → ailv-ops-index. Two or more agents sharing one deploy or codebase → ailv-ops-index too. Vuln deadlines, enterprise login, regulated data → ailv-sec-index. Security deep-dives — the OWASP Top 10 set, read on match: ailv-code-crypto, ailv-code-injection, ailv-code-design, ailv-code-misconfig, ailv-code-deps, ailv-code-integrity, ailv-code-logging, ailv-code-ssrf. Pass 2 — stack specifics. After the task match, apply the stack the codebase already uses: language → ailv-code-language (Python first on new code; if the project already uses another language, skip this skill or overwrite it with that stack). Interface framework → ailv-ui-index (house default Lit via ailv-ui-framework; widget libraries per framework live in ailv-ui-platform-picks). Styling → ailv-ui-tokens (unless the project already has a design system — then skip it). Mobile platform → ailv-ui-mobile (Capacitor shell unless native is technically required). Service-to-service → ailv-code-boundaries (same-language HTTP, other languages gRPC, events validated). SQLModel in the stack → ailv-code-sqlmodel (table-model quirks) — fetched only then, never by default. These stack picks assume a new codebase: if the project already uses something else — another language, framework, tokens, or platform — follow that instead. The house rule beats the skill. Skip everything else. Fetch all matched skills in one batched request; never fetch the same skill twice in one session — installed skills live locally. When building is done → ailv-verify-review first (diff vs task plus philosophy), then ailv-verify-types, then ailv-verify-tests, plus ailv-verify-visual for screens, ailv-verify-layout for layout, ailv-verify-debug when the output is wrong, ailv-verify-benchmark to prove the savings, and ailv-verify-scope to size the run. When handing over → ailv-code-deliver first (proof artifact per task, never process summary). Three or more matched skills → ailv-code-plan first. Missing a skill? Copy its prompt from the skills page once, install it, then use it locally. Evolving the bank itself — versions, retiring skills → ailv-code-lifecycle. This follows progressive disclosure — map first, details on demand.
+
+## Checks
+
+- only matched skills are read
+- always-on skills never skipped
+- whole bank never copied at once
+- non-coding steps read no skills
+- no step reads more than 3 full-prompt skills
+
+Per-step discipline: non-coding steps (tally, handoff, defect-count, metadata, sign-off) read nothing. Test-writing steps add ailv-verify-tests. First file of its kind reads its area index first. Repeat reads use slim fields (id, prompt, checks). Cap full-prompt reads per build step: the map plus at most three full skills — every further skill reads slim fields only. Setup steps (scaffold, deps, versions) read the map plus at most two; never the full always-on four at full size on step one.
+
+## Checks
+
+- only matched skills are read
+- always-on skills never skipped
+- whole bank never copied at once
+- non-coding steps read no skills
+- no step reads more than 3 full-prompt skills
