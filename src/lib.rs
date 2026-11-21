@@ -1,3 +1,9 @@
+pub mod affinity;
+pub mod downloader;
 pub mod inference;
+pub mod manifest;
+pub mod mdns;
+pub mod model_store;
 pub mod scanner;
 pub mod server;
+pub mod ui;

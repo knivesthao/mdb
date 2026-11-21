@@ -1,5 +1,9 @@
-//! OpenAI-compatible HTTP layer: `GET /health` and
+//! OpenAI-compatible HTTP layer: `GET /health`, `GET /v1/models`, and
 //! `POST /v1/chat/completions` with optional SSE streaming.
+//!
+//! `POST /v1/models/swap` is an MDB extension (not OpenAI) reserved for the
+//! future Zed companion: hot-swaps the loaded model on the same endpoint.
+//! Swaps serialize behind a mutex so in-flight requests finish first.
 
 use std::{convert::Infallible, sync::Arc};
 
@@ -13,11 +17,25 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use tokio::net::TcpListener;
-use tokio::sync::mpsc;
+use tokio::{net::TcpListener, sync::Mutex};
 use tokio_stream::wrappers::ReceiverStream;
 
 use crate::inference::Backend;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub backend: Arc<dyn Backend>,
+    pub swap_lock: Arc<Mutex<()>>,
+}
+
+impl AppState {
+    pub fn new(backend: Arc<dyn Backend>) -> Self {
+        Self {
+            backend,
+            swap_lock: Arc::new(Mutex::new(())),
+        }
+    }
+}
 
 #[derive(Deserialize)]
 struct ChatMessage {
@@ -50,12 +68,61 @@ struct ChatResponse {
     choices: Vec<ChatChoice>,
 }
 
+#[derive(Serialize)]
+struct ModelEntry {
+    id: String,
+    object: &'static str,
+    owned_by: &'static str,
+}
+
+#[derive(Serialize)]
+struct ModelList {
+    object: &'static str,
+    data: Vec<ModelEntry>,
+}
+
+#[derive(Deserialize)]
+struct SwapRequest {
+    model: String,
+}
+
 async fn health() -> &'static str {
     "ok"
 }
 
+async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
+    Json(ModelList {
+        object: "list",
+        data: vec![ModelEntry {
+            id: state.backend.model_id(),
+            object: "model",
+            owned_by: "mdb",
+        }],
+    })
+}
+
+async fn swap_model(
+    State(state): State<AppState>,
+    Json(req): Json<SwapRequest>,
+) -> Response {
+    let _guard = state.swap_lock.lock().await;
+    match state.backend.load(&req.model) {
+        Ok(()) => Json(ModelEntry {
+            id: state.backend.model_id(),
+            object: "model",
+            owned_by: "mdb",
+        })
+        .into_response(),
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("swap failed: {e}"),
+        )
+            .into_response(),
+    }
+}
+
 async fn chat_completions(
-    State(backend): State<Arc<dyn Backend>>,
+    State(state): State<AppState>,
     Json(req): Json<ChatRequest>,
 ) -> Response {
     let prompt = req
@@ -64,7 +131,8 @@ async fn chat_completions(
         .map(|m| m.content.clone())
         .unwrap_or_default();
     if req.stream {
-        let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(16);
+        let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(16);
+        let backend = state.backend.clone();
         tokio::spawn(async move {
             for token in backend.complete(&prompt) {
                 let event = Event::default().data(token);
@@ -78,7 +146,7 @@ async fn chat_completions(
             .keep_alive(KeepAlive::default())
             .into_response()
     } else {
-        let content = backend.complete(&prompt).concat();
+        let content = state.backend.complete(&prompt).concat();
         Json(ChatResponse {
             object: "chat.completion",
             model: req.model,
@@ -93,18 +161,20 @@ async fn chat_completions(
     }
 }
 
-pub fn router(backend: Arc<dyn Backend>) -> Router {
+pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health))
+        .route("/v1/models", get(list_models))
+        .route("/v1/models/swap", post(swap_model))
         .route("/v1/chat/completions", post(chat_completions))
-        .with_state(backend)
+        .with_state(state)
 }
 
-pub async fn serve(listener: TcpListener, backend: Arc<dyn Backend>) {
-    axum::serve(listener, router(backend)).await.unwrap();
+pub async fn serve(listener: TcpListener, state: AppState) {
+    axum::serve(listener, router(state)).await.unwrap();
 }
 
-pub async fn run(addr: &str, backend: Arc<dyn Backend>) {
+pub async fn run(addr: &str, state: AppState) {
     let listener = TcpListener::bind(addr).await.unwrap();
-    serve(listener, backend).await;
+    serve(listener, state).await;
 }

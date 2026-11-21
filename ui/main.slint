@@ -1,0 +1,70 @@
+import { Button, ComboBox, LineEdit, TabWidget } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "MDB - Mobile Dev Bridge";
+    min-width: 420px;
+    min-height: 560px;
+
+    in-out property <string> server-status: "Stopped";
+    in-out property <string> endpoint: "http://<phone-ip>:8080/v1";
+    in-out property <string> recommended-model: "—";
+    in-out property <string> current-model: "none (mock)";
+    callback start-pressed();
+    callback recommend-pressed();
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 8px;
+
+        Text {
+            text: "MDB - Mobile Dev Bridge";
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        TabWidget {
+            Tab {
+                title: "Pro";
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 6px;
+                    Text { text: "Model Vault and hot-swapping are Phase 2."; }
+                    Text { text: "Free tier: no account needed, one active model."; }
+                }
+            }
+            Tab {
+                title: "Hardware";
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 6px;
+                    Text { text: "Total RAM: <scan on device>"; }
+                    Text { text: "Available RAM: <scan on device>"; }
+                    Text { text: "Badges: Runs Fast / Tight Fit / Exceeds RAM (from manifest)"; }
+                    Text { text: "Intent:"; }
+                    ComboBox {
+                        model: ["Code Completion", "Chat / Writing", "General Reasoning"];
+                    }
+                    Button {
+                        text: "Recommend model";
+                        clicked => { root.recommend-pressed(); }
+                    }
+                    Text { text: "Recommended: " + root.recommended-model; }
+                }
+            }
+            Tab {
+                title: "Server";
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 6px;
+                    Text { text: "Endpoint: " + root.endpoint; }
+                    Text { text: "Model: " + root.current-model; }
+                    Text { text: "Status: " + root.server-status; }
+                    Button {
+                        text: "Start AI Server";
+                        clicked => { root.start-pressed(); }
+                    }
+                }
+            }
+        }
+    }
+}
